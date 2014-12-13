@@ -1,0 +1,23 @@
+{
+  "name": "uploadx",
+  "version": "0.0.0",
+  "description": "File upload handler",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@bitbucket.org:tomascaslo/uploadx.git"
+  },
+  "author": "tomascaslo",
+  "license": "BSD-2-Clause",
+  "devDependencies": {
+    "express": "~4.8.6",
+    "forever": "~0.11.1",
+    "body-parser": "^1.6.6",
+    "multer": "^0.1.4",
+    "querystring": "^0.2.0",
+    "request": "^2.40.0"
+  }
+}
