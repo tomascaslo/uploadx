@@ -7,7 +7,7 @@ var DJANGO_KEY = '6dca3006ce0743bc8af17cfcecd8b870';
 
 var TEMP_FILES_PATH = './uploads/temp/';
 var MEDIA_FILES_PATH = './uploads/images/'
-var VALID_MIMETYPES = ['image/jpg', 'image/jpeg', 'image/png', "image/gif"]
+var VALID_MIMETYPES = ['image/jpg', 'image/jpeg', 'image/png', 'image/gif']
 
 var uploadx = express();
 
@@ -41,16 +41,16 @@ uploadx.post('/uploadx/full/', function(req, res){
 	var file_path = './' + req.files.myFile.path;
 
 	var data = JSON.stringify({
-		uuidx_token: req.body.token,
-		django_key: DJANGO_KEY
+		uuidx_token : req.body.token,
+		django_key : DJANGO_KEY
 	});
 
 	console.log(data);
 
 	var options = {
 		host: 'localhost', // Api server host
-		port: '8888', // Api server port
-		path: '/api/v1/uploadx/validate_token/',
+		port: '8000', // Api server port
+		path: '/api/foodtruckie/uploadx/validate_token/',
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
