@@ -77,7 +77,7 @@ uploadx.post('/uploadx/full/', function(req, res){
 							persist_file(from, to);
 						});
 					}
-					success_200_handle(res); // Send url path of created image
+					success_200_handle(res, rData.folder_to_save_image + '/' + file_name); // Send url path of created image
 				});
 			} else {
 				error_401_handle(res);
@@ -111,9 +111,13 @@ var persist_file = function(from, to){
 	});
 };
 
-var success_200_handle = function(res){
-	res.writeHead(200, {'Content-Type': 'text/html' });
-	res.write("200 OK");
+var success_200_handle = function(res, imagePath){
+	res.writeHead(200, {'Content-Type': 'application/json' });
+	if(imagePath){
+		res.write(JSON.stringify({
+			'imagePath' : imagePath
+		}));
+	}
 	res.end();
 };
 
