@@ -12,13 +12,12 @@ var utils = require('./lib/utils.js')(VALID_MIMETYPES);
 
 var DJANGO_KEY = '6dca3006ce0743bc8af17cfcecd8b870';
 
-var TEMP_FILES_PATH = './uploads/temp/';
-var MEDIA_FILES_PATH = './uploads/images/'
+var TEMP_FILES_PATH = __dirname + '/uploads/temp/';
+var MEDIA_FILES_PATH = __dirname + '/uploads/images/';
 
 var uploadx = express();
 
-
-utils.createFileIfNotExists('./uploads/');
+utils.createFileIfNotExists(__dirname + '/uploads/');
 utils.createFileIfNotExists(TEMP_FILES_PATH);
 utils.createFileIfNotExists(MEDIA_FILES_PATH);
 
