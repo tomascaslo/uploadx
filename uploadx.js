@@ -17,10 +17,12 @@ var MEDIA_FILES_PATH = './uploads/images/'
 
 var uploadx = express();
 
+
 utils.createFileIfNotExists('./uploads/');
 utils.createFileIfNotExists(TEMP_FILES_PATH);
 utils.createFileIfNotExists(MEDIA_FILES_PATH);
 
+uploadx.use(express.static(__dirname + '/uploads/images'));
 uploadx.use(multer({ // Multer configuration for handling of multipart/form-data requestuests
 	dest: TEMP_FILES_PATH,
 
@@ -108,7 +110,7 @@ uploadx.post('/uploadx/full/', function(request, response){
 
 	validate.write(data);
 	validate.end(data);
-	
+
 });
 
 console.log("Running server on localhost port 8080...");
