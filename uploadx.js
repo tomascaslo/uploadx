@@ -1,7 +1,9 @@
 var express = require('express'),
 	multer = require('multer'),
 	http = require('http'),
-	fs = require('fs');
+	responseHandler = require('./lib/responseHandler.js'),
+	errorHandler = require('./lib/errorHandler.js'),
+	utils = require('./lib/utils.js');
 
 var DJANGO_KEY = '6dca3006ce0743bc8af17cfcecd8b870';
 
@@ -13,19 +15,24 @@ var uploadx = express();
 
 uploadx.use(multer({ // Multer configuration for handling of multipart/form-data requests
 	dest: TEMP_FILES_PATH,
+
 	rename: function (fieldname, filename) {
 		return filename.replace(/\W+/g, '-').toLowerCase() + Date.now();
 	},
+
 	limits: {
 		fileSize: 10485760,
 	},
+
 	onFileUploadComplete: function (file) {
 		console.log(file.fieldname + ' uploaded to  ' + file.path);
 	},
+
 	onFileSizeLimit: function (file) {
 		console.log('Failed: ', file.originalname)
 		fs.unlink('./' + TEMP_FILES_PATH + file.path) // delete the partially written file
 	}
+
 }));
 
 uploadx.post('/uploadx/full/', function(req, res){
@@ -58,26 +65,26 @@ uploadx.post('/uploadx/full/', function(req, res){
 		}
 	};
 
-	var validate = http.request(options, function(vRes){ // vRes: validation response
-		vRes.setEncoding('utf8');
-		vRes.on('data', function(data){ // { valid_token: true, folder_to_save_image: 'user8tomascaslo' }
+	var validate = http.request(options, function(validationResponse){
+		validationResponse.setEncoding('utf8');
+		validationResponse.on('data', function(data){ // { valid_token: true, folder_to_save_image: 'user8tomascaslo' }
 			console.log(data);
-			var rData = JSON.parse(data); // rData: response data 
-			if(rData.valid_token){
-				fs.exists(MEDIA_FILES_PATH + rData.folder_to_save_image, function(exists){ 
+			var responseData = JSON.parse(data); 
+			if(responseData.valid_token){
+				fs.exists(MEDIA_FILES_PATH + responseData.folder_to_save_image, function(exists){ 
 					var from, to;
 					from = TEMP_FILES_PATH + file_name;
-					to = MEDIA_FILES_PATH + rData.folder_to_save_image + '/' + file_name;
+					to = MEDIA_FILES_PATH + responseData.folder_to_save_image + '/' + file_name;
 					if(exists){
 						persist_file(from, to);
 					} else {
-						fs.mkdir(MEDIA_FILES_PATH + rData.folder_to_save_image, function(err){
+						fs.mkdir(MEDIA_FILES_PATH + responseData.folder_to_save_image, function(err){
 							if(err) throw err;
 							// error_500_handle(res);
 							persist_file(from, to);
 						});
 					}
-					success_200_handle(res, rData.folder_to_save_image + '/' + file_name); // Send url path of created image
+					success_200_handle(res, responseData.folder_to_save_image + '/' + file_name); // Send url path of created image
 				});
 			} else {
 				error_401_handle(res);
@@ -104,10 +111,56 @@ uploadx.post('/uploadx/full/', function(req, res){
 	validate.end(data);
 });
 
+var ResponseHandler = function () {
+	var theContentType = { 'Content-Type': 'application/json' };
+
+	this.send = function (response, code, message, aContentType) {
+		if ( typeof aContentType !== 'undefined' ) {
+			aContentType = { 'Content-Type': aContentType };
+			response.writeHead(code, aContentType);
+		} else {
+			response.writeHead(code, theContentType);
+		}
+
+		response.write(JSON.stringify(message));
+		response.end();
+
+	};
+
+};
+
+var ErrorHandler = function () {
+	var message = { error : '' };
+
+	this.error333 = function (response) {
+		message.error = 'Format not allowed';
+		responseHandler.send(response, 333, message);
+	};
+
+	this.error401 = function (response) {
+		message.error = 'Format not allowed';
+		responseHandler.send(response, 401, message);
+	};
+
+	this.error500 = function (response) {
+		message.error = 'Format not allowed';
+		responseHandler.send(response, 500, message);
+	};
+
+};
+
+var Utils = function () {
+	this.moveFile = function (from, to) {
+		fs.rename(from, to, function(err){
+			if(err) throw err;
+		});
+	};
+
+};
+
 var persist_file = function(from, to){
 	fs.rename(from, to, function(err){
 		if(err) throw err;
-		// error_500_handle();
 	});
 };
 
@@ -132,6 +185,7 @@ var error_401_handle = function(res){
 };
 
 var error_333_handle = function(res){
+	res.writeHead(200, {'Content-Type': 'application/json' });
 	res.write('333 Format not allowed');
 	res.end();
 };
