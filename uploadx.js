@@ -1,19 +1,27 @@
+'use strict';
+
 var express = require('express'),
 	multer = require('multer'),
 	http = require('http'),
 	responseHandler = require('./lib/responseHandler.js'),
-	errorHandler = require('./lib/errorHandler.js'),
-	utils = require('./lib/utils.js');
+	errorHandler = require('./lib/errorHandler.js');
+
+var VALID_MIMETYPES = ['image/jpg', 'image/jpeg', 'image/png', 'image/gif'];
+
+var utils = require('./lib/utils.js')(VALID_MIMETYPES);
 
 var DJANGO_KEY = '6dca3006ce0743bc8af17cfcecd8b870';
 
 var TEMP_FILES_PATH = './uploads/temp/';
 var MEDIA_FILES_PATH = './uploads/images/'
-var VALID_MIMETYPES = ['image/jpg', 'image/jpeg', 'image/png', 'image/gif']
 
 var uploadx = express();
 
-uploadx.use(multer({ // Multer configuration for handling of multipart/form-data requests
+utils.createFileIfNotExists('./uploads/');
+utils.createFileIfNotExists(TEMP_FILES_PATH);
+utils.createFileIfNotExists(MEDIA_FILES_PATH);
+
+uploadx.use(multer({ // Multer configuration for handling of multipart/form-data requestuests
 	dest: TEMP_FILES_PATH,
 
 	rename: function (fieldname, filename) {
@@ -29,30 +37,24 @@ uploadx.use(multer({ // Multer configuration for handling of multipart/form-data
 	},
 
 	onFileSizeLimit: function (file) {
-		console.log('Failed: ', file.originalname)
-		fs.unlink('./' + TEMP_FILES_PATH + file.path) // delete the partially written file
+		utils.deleteFile('./' + TEMP_FILES_PATH + file.path);
 	}
 
 }));
 
-uploadx.post('/uploadx/full/', function(req, res){
-	console.log(req.files);
-	console.log(req.body);
-	console.log(!(VALID_MIMETYPES.indexOf(req.files.myFile.mimetype) >= 0));
-	if(!(VALID_MIMETYPES.indexOf(req.files.myFile.mimetype) >= 0)) {
-		error_333_handle(res);
+uploadx.post('/uploadx/full/', function(request, response){
+	if(!utils.hasValidFileType(request)) {
+		utils.error333(response);
 	}
 
-	var file_name = req.files.myFile.name;
-	var file_realname = req.files.myFile.originalname;
-	var file_path = './' + req.files.myFile.path;
+	var fileName = request.files.myFile.name;
+	var fileRealName = request.files.myFile.originalname;
+	var filePath = './' + request.files.myFile.path;
 
 	var data = JSON.stringify({
-		uuidx_token : req.body.token,
+		uuidx_token : request.body.token,
 		django_key : DJANGO_KEY
 	});
-
-	console.log(data);
 
 	var options = {
 		host: 'localhost', // Api server host
@@ -65,130 +67,49 @@ uploadx.post('/uploadx/full/', function(req, res){
 		}
 	};
 
-	var validate = http.request(options, function(validationResponse){
+	var validate = http.request(options, function (validationResponse) {
 		validationResponse.setEncoding('utf8');
-		validationResponse.on('data', function(data){ // { valid_token: true, folder_to_save_image: 'user8tomascaslo' }
-			console.log(data);
+		validationResponse.on('data', function (data) { // { valid_token: true, folder_to_save_image: 'user8tomascaslo' }
 			var responseData = JSON.parse(data); 
-			if(responseData.valid_token){
-				fs.exists(MEDIA_FILES_PATH + responseData.folder_to_save_image, function(exists){ 
+			if ( responseData.valid_token ) {
+				utils.fileExists(MEDIA_FILES_PATH + responseData.folder_to_save_image, function (exists) { 
 					var from, to;
-					from = TEMP_FILES_PATH + file_name;
-					to = MEDIA_FILES_PATH + responseData.folder_to_save_image + '/' + file_name;
-					if(exists){
-						persist_file(from, to);
+					from = TEMP_FILES_PATH + fileName;
+					to = MEDIA_FILES_PATH + responseData.folder_to_save_image + '/' + fileName;
+					if ( exists ) {
+						utils.saveFile(from, to);
 					} else {
-						fs.mkdir(MEDIA_FILES_PATH + responseData.folder_to_save_image, function(err){
-							if(err) throw err;
-							// error_500_handle(res);
-							persist_file(from, to);
+						utils.createDirectory(MEDIA_FILES_PATH + responseData.folder_to_save_image, function (err) {
+							if ( err ) throw err;
+							utils.saveFile(from, to);
 						});
 					}
-					success_200_handle(res, responseData.folder_to_save_image + '/' + file_name); // Send url path of created image
+					responseHandler.send(response, 200, responseData.folder_to_save_image + '/' + fileName); // Send url path of created image
 				});
 			} else {
-				error_401_handle(res);
+				errorHandler.error401(response);			
 			}
 		});
 	});
 
-	validate.on('error', function(err){
-		fs.exists(file_path, function(exists){
+	validate.on('error', function (err) {
+		utils.fileExists(filePath, function (exists) {
 			if(exists){
-				console.log("It exists!");
-				fs.unlink(file_path, function(err){
-					if(err) throw err;
-					console.log("Deleted " + file_realname + ": Error on upload.")
+				utils.deleteFile(filePath, function (err) {
+					if ( err ) throw err;
+					console.log("Deleted " + fileRealName + ": Error on upload.");
 				});
-			} else {
-				console.log("It doesn't exists!");
-			}
-			error_500_handle(res);
+			} 
+			errorHandler.error500(response);
+
 		});
+
 	});
 
 	validate.write(data);
 	validate.end(data);
+	
 });
-
-var ResponseHandler = function () {
-	var theContentType = { 'Content-Type': 'application/json' };
-
-	this.send = function (response, code, message, aContentType) {
-		if ( typeof aContentType !== 'undefined' ) {
-			aContentType = { 'Content-Type': aContentType };
-			response.writeHead(code, aContentType);
-		} else {
-			response.writeHead(code, theContentType);
-		}
-
-		response.write(JSON.stringify(message));
-		response.end();
-
-	};
-
-};
-
-var ErrorHandler = function () {
-	var message = { error : '' };
-
-	this.error333 = function (response) {
-		message.error = 'Format not allowed';
-		responseHandler.send(response, 333, message);
-	};
-
-	this.error401 = function (response) {
-		message.error = 'Format not allowed';
-		responseHandler.send(response, 401, message);
-	};
-
-	this.error500 = function (response) {
-		message.error = 'Format not allowed';
-		responseHandler.send(response, 500, message);
-	};
-
-};
-
-var Utils = function () {
-	this.moveFile = function (from, to) {
-		fs.rename(from, to, function(err){
-			if(err) throw err;
-		});
-	};
-
-};
-
-var persist_file = function(from, to){
-	fs.rename(from, to, function(err){
-		if(err) throw err;
-	});
-};
-
-var success_200_handle = function(res, imagePath){
-	res.writeHead(200, {'Content-Type': 'application/json' });
-	if(imagePath){
-		res.write(JSON.stringify({
-			'imagePath' : imagePath
-		}));
-	}
-	res.end();
-};
-
-var error_500_handle = function(res){
-	res.write('500 Internal server error');
-	res.end();
-};
-
-var error_401_handle = function(res){
-	res.write('401 Unauthorized');
-	res.end();
-};
-
-var error_333_handle = function(res){
-	res.writeHead(200, {'Content-Type': 'application/json' });
-	res.write('333 Format not allowed');
-	res.end();
-};
 
 console.log("Running server on localhost port 8080...");
 
