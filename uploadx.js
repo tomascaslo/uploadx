@@ -10,7 +10,9 @@ var VALID_MIMETYPES = ['image/jpg', 'image/jpeg', 'image/png', 'image/gif'];
 
 var utils = require('./lib/utils.js')(VALID_MIMETYPES);
 
-var DJANGO_KEY = '6dca3006ce0743bc8af17cfcecd8b870';
+var DJANGO_API_KEY = utils.loadEnvVariable('DJANGO_API_KEY');
+var API_HOST = utils.loadEnvVariable('API_HOST', '127.0.0.1');
+var API_PORT = utils.loadEnvVariable('API_PORT', '80');
 
 var TEMP_FILES_PATH = __dirname + '/uploads/temp/';
 var MEDIA_FILES_PATH = __dirname + '/uploads/images/';
@@ -54,12 +56,12 @@ uploadx.post('/uploadx/full/', function(request, response){
 
 	var data = JSON.stringify({
 		uuidx_token : request.body.token,
-		django_key : DJANGO_KEY
+		django_key : DJANGO_API_KEY
 	});
 
 	var options = {
-		host: 'localhost', // Api server host
-		port: '8000', // Api server port
+		host: API_HOST, // Api server host
+		port: API_PORT, // Api server port
 		path: '/api/foodtruckie/uploadx/validate_token/',
 		method: 'POST',
 		headers: {
@@ -114,4 +116,4 @@ uploadx.post('/uploadx/full/', function(request, response){
 
 console.log("Running server on localhost port 8080...");
 
-uploadx.listen(8080);
+uploadx.listen(80);
