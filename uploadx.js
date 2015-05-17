@@ -50,9 +50,9 @@ uploadx.post('/uploadx/full/', function(request, response){
 		utils.error333(response);
 	}
 
-	var fileName = request.files.myFile.name;
-	var fileRealName = request.files.myFile.originalname;
-	var filePath = './' + request.files.myFile.path;
+	var fileName = request.files.file.name;
+	var fileRealName = request.files.file.originalname;
+	var filePath = './' + request.files.file.path;
 
 	var data = JSON.stringify({
 		uuidx_token : request.body.token,
@@ -116,4 +116,4 @@ uploadx.post('/uploadx/full/', function(request, response){
 
 console.log("Running server on localhost port 8080...");
 
-uploadx.listen(80);
+uploadx.listen(8080);
